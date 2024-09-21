@@ -2,8 +2,9 @@
 SKIPUNZIP=1
 
 DEBUG=@DEBUG@
-SONAME=@SONAME@
-SUPPORTED_ABIS="@SUPPORTED_ABIS@"
+SONAME=build_var_spoof
+SUPPORTED_ABIS="arm64 x64 arm x86"
+MIN_SDK=27
 
 if [ "$BOOTMODE" ] && [ "$KSU" ]; then
   ui_print "- Installing from KernelSU app"
@@ -26,15 +27,8 @@ fi
 VERSION=$(grep_prop version "${TMPDIR}/module.prop")
 ui_print "- Installing $SONAME $VERSION"
 
-# check architecture
-support=false
-for abi in $SUPPORTED_ABIS
-do
-  if [ "$ARCH" == "$abi" ]; then
-    support=true
-  fi
-done
-if [ "$support" == "false" ]; then
+# Check architecture
+if [ "$ARCH" != "arm" ] && [ "$ARCH" != "arm64" ] && [ "$ARCH" != "x86" ] && [ "$ARCH" != "x64" ]; then
   abort "! Unsupported platform: $ARCH"
 else
   ui_print "- Device platform: $ARCH"
@@ -48,38 +42,47 @@ if [ ! -f "$TMPDIR/verify.sh" ]; then
   ui_print "! This zip may be corrupted, please try downloading again"
   abort    "*********************************************************"
 fi
+
+# check android
+if [ "$API" -lt $MIN_SDK ]; then
+  ui_print "! Unsupported sdk: $API"
+  abort "! Minimal supported sdk is $MIN_SDK"
+else
+  ui_print "- Device sdk: $API"
+fi
+
 . "$TMPDIR/verify.sh"
 extract "$ZIPFILE" 'customize.sh'  "$TMPDIR/.vunzip"
 extract "$ZIPFILE" 'verify.sh'     "$TMPDIR/.vunzip"
-extract "$ZIPFILE" 'sepolicy.rule' "$TMPDIR"
 
 ui_print "- Extracting module files"
 extract "$ZIPFILE" 'module.prop'     "$MODPATH"
 extract "$ZIPFILE" 'post-fs-data.sh' "$MODPATH"
 extract "$ZIPFILE" 'service.sh'      "$MODPATH"
-mv "$TMPDIR/sepolicy.rule" "$MODPATH"
-
-HAS32BIT=false && [ $(getprop ro.product.cpu.abilist32) ] && HAS32BIT=true
 
 mkdir "$MODPATH/zygisk"
 
-if [ "$ARCH" = "x86" ] || [ "$ARCH" = "x64" ]; then
-  if [ "$HAS32BIT" = true ]; then
-    ui_print "- Extracting x86 libraries"
-    extract "$ZIPFILE" "lib/x86/lib$SONAME.so" "$MODPATH/zygisk/" true
-    mv "$MODPATH/zygisk/lib$SONAME.so" "$MODPATH/zygisk/x86.so"
-  fi
-
-  ui_print "- Extracting x64 libraries"
-  extract "$ZIPFILE" "lib/x86_64/lib$SONAME.so" "$MODPATH/zygisk" true
-  mv "$MODPATH/zygisk/lib$SONAME.so" "$MODPATH/zygisk/x86_64.so"
-else
-  if [ "$HAS32BIT" = true ]; then
-    extract "$ZIPFILE" "lib/armeabi-v7a/lib$SONAME.so" "$MODPATH/zygisk" true
-    mv "$MODPATH/zygisk/lib$SONAME.so" "$MODPATH/zygisk/armeabi-v7a.so"
-  fi
-
+if [ "$ARCH" = "arm64" ]; then
   ui_print "- Extracting arm64 libraries"
-  extract "$ZIPFILE" "lib/arm64-v8a/lib$SONAME.so" "$MODPATH/zygisk" true
-  mv "$MODPATH/zygisk/lib$SONAME.so" "$MODPATH/zygisk/arm64-v8a.so"
+  extract "$ZIPFILE" "lib/arm64-v8a/libzygisk.so" "$MODPATH/zygisk" true
+  mv "$MODPATH/zygisk/libzygisk.so" "$MODPATH/zygisk/arm64-v8a.so"
+elif [ "$ARCH" = "x64" ]; then
+  ui_print "- Extracting x64 libraries"
+  extract "$ZIPFILE" "lib/x86_64/libzygisk.so" "$MODPATH/zygisk" true
+  mv "$MODPATH/zygisk/libzygisk.so" "$MODPATH/zygisk/x86_64.so"
+elif [ "$ARCH" = "arm" ]; then
+  ui_print "- Extracting arm libraries"
+  extract "$ZIPFILE" "lib/armeabi-v7a/libzygisk.so" "$MODPATH/zygisk" true
+  mv "$MODPATH/zygisk/libzygisk.so" "$MODPATH/zygisk/armeabi-v7a.so"
+elif [ "$ARCH" = "x86" ]; then
+  ui_print "- Extracting x86 libraries"
+  extract "$ZIPFILE" "lib/x86/libzygisk.so" "$MODPATH/zygisk" true
+  mv "$MODPATH/zygisk/libzygisk.so" "$MODPATH/zygisk/x86.so"
+fi
+
+CONFIG_DIR=/data/adb/build_var_spoof
+if [ ! -d "$CONFIG_DIR" ]; then
+  ui_print "- Creating configuration directory"
+  mkdir -p "$CONFIG_DIR"
+  [ ! -f "$CONFIG_DIR/spoof_build_vars" ] && touch "$CONFIG_DIR/spoof_build_vars"
 fi

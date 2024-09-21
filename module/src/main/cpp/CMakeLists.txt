@@ -1,16 +1,14 @@
-cmake_minimum_required(VERSION 3.22.1)
-project(sample)
+cmake_minimum_required(VERSION 3.28.0)
+project(build_var_spoof)
 
-set(LINKER_FLAGS "-ffixed-x18 -Wl,--hash-style=both")
+find_package(cxx REQUIRED CONFIG)
+link_libraries(cxx::cxx)
 
-set(CXX_FLAGS "${CXX_FLAGS} -fno-exceptions -fno-rtti -fvisibility=hidden -fvisibility-inlines-hidden")
+add_library(my_logging STATIC logging/logging.cpp)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_FLAGS}")
+target_include_directories(my_logging PUBLIC logging/include)
 
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${LINKER_FLAGS}")
-set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${LINKER_FLAGS}")
+target_link_libraries(my_logging log)
 
-add_library(${MODULE_NAME} SHARED example.cpp)
-target_link_libraries(${MODULE_NAME} cxx log)
-
-add_subdirectory(external)
+add_library(zygisk SHARED zygisk/main.cpp)
+target_link_libraries(zygisk PRIVATE log my_logging)

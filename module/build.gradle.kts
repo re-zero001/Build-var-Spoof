@@ -5,6 +5,7 @@ import java.security.MessageDigest
 
 plugins {
     alias(libs.plugins.agp.app)
+    alias(libs.plugins.lsplugin.cmaker)
 }
 
 val moduleId: String by rootProject.extra
@@ -13,39 +14,52 @@ val verCode: Int by rootProject.extra
 val verName: String by rootProject.extra
 val commitHash: String by rootProject.extra
 val abiList: List<String> by rootProject.extra
+val androidMinSdkVersion: Int by rootProject.extra
+val author: String by rootProject.extra
+val description: String by rootProject.extra
+val moduleDescription = description
 
 android {
     defaultConfig {
         ndk {
             abiFilters.addAll(abiList)
         }
-        externalNativeBuild {
-            /*
-            ndkBuild {
-                arguments("MODULE_NAME=$moduleId")
-            }
-            */
-            cmake {
-                cppFlags("-std=c++20")
-                arguments(
-                    "-DANDROID_STL=none",
-                    "-DMODULE_NAME=$moduleId"
-                )
-            }
-        }
     }
+
+    buildFeatures {
+        prefab = true
+    }
+
     externalNativeBuild {
-        /*
-        ndkBuild {
-            path("src/main/cpp/Android.mk")
-        }
-        */
         cmake {
+            version = "3.28.0+"
             path("src/main/cpp/CMakeLists.txt")
         }
     }
+    ndkVersion = "27.1.12297006"
 }
 
+cmaker {
+    default {
+        arguments += arrayOf(
+            "-DANDROID_STL=none",
+            "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+            "-DANDROID_ALLOW_UNDEFINED_SYMBOLS=ON",
+            "-DMODULE_NAME=$moduleId",
+            "-DCMAKE_CXX_STANDARD=23",
+            "-DCMAKE_C_STANDARD=23",
+            "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON",
+            "-DCMAKE_VISIBILITY_INLINES_HIDDEN=ON",
+            "-DCMAKE_CXX_VISIBILITY_PRESET=hidden",
+            "-DCMAKE_C_VISIBILITY_PRESET=hidden",
+        )
+        abiFilters(*abiList.toTypedArray())
+    }
+}
+
+dependencies {
+    implementation(libs.cxx)
+}
 androidComponents.onVariants { variant ->
     afterEvaluate {
         val variantLowered = variant.name.lowercase()
@@ -80,7 +94,9 @@ androidComponents.onVariants { variant ->
                     "moduleId" to moduleId,
                     "moduleName" to moduleName,
                     "versionName" to "$verName ($verCode-$commitHash-$variantLowered)",
-                    "versionCode" to verCode
+                    "versionCode" to verCode,
+                    "author" to author,
+                    "description" to moduleDescription,
                 )
             }
             from(layout.projectDirectory.file("template")) {
@@ -88,7 +104,8 @@ androidComponents.onVariants { variant ->
                 val tokens = mapOf(
                     "DEBUG" to if (buildTypeLowered == "debug") "true" else "false",
                     "SONAME" to moduleId,
-                    "SUPPORTED_ABIS" to supportedAbis
+                    "SUPPORTED_ABIS" to supportedAbis,
+                    "MIN_SDK" to androidMinSdkVersion.toString()
                 )
                 filter<ReplaceTokens>("tokens" to tokens)
                 filter<FixCrLfFilter>("eol" to FixCrLfFilter.CrLf.newInstance("lf"))

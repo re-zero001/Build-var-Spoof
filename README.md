@@ -1,16 +1,34 @@
-# Zygisk Module Template
+# Build Vars Spoofing
 
-An Zygisk Module Template based on zygisk-module-sample. Both cmake and ndk-build are supported.
+Build Vars Spoofing. **Android 8.1 or above is required**.
 
 ## Usage
 
-1. Edit your moduleId in [build.gradle.kts](./build.gradle.kts) (It's also your module's soname).  
-2. Edit other module info in build.gradle.kts or module/template/module.prop.  
-3. Write your code in module/src/main/cpp .  
-4. Run gradle task `:zipDebug` or `:zipRelease` to build the module. 
-   Your module zip will be generated under `module/release`. 
-5. Run gradle task `:install(Magisk|Ksu)[AndReboot](Debug|Release)` to flash your module (optional).  
+1. Flash this module and reboot.
+2. Enjoy!
 
-## See also
+You can try enabling/disabling Build variable spoofing by creating/deleting the file `/data/adb/build_var_spoof/spoof_build_vars`.
 
-https://github.com/topjohnwu/zygisk-module-sample
+Build Vars Spoofing will automatically generate example config props inside `/data/adb/build_var_spoof/spoof_build_vars` once created, on next reboot, then you may manually edit your spoof config.
+
+Here is an example of a spoof config:
+
+```
+MANUFACTURER=Google
+MODEL=Pixel 9 Pro XL
+FINGERPRINT=google/komodo_beta/komodo:15/AP31.240617.015/12207491:user/release-keys
+BRAND=google
+PRODUCT=komodo_beta
+DEVICE=komodo
+RELEASE=15
+ID=AP31.240617.015
+INCREMENTAL=12207491
+TYPE=user
+TAGS=release-keys
+SECURITY_PATCH=2024-08-05
+```
+
+## Acknowledgement
+
+- [PlayIntegrityFix](https://github.com/chiteroman/PlayIntegrityFix)
+- [LSPosed](https://github.com/LSPosed/LSPosed)
