@@ -1,4 +1,3 @@
-# shellcheck disable=SC2034
 SKIPUNZIP=1
 
 DEBUG=@DEBUG@
@@ -57,6 +56,8 @@ extract "$ZIPFILE" 'verify.sh'     "$TMPDIR/.vunzip"
 
 ui_print "- Extracting module files"
 extract "$ZIPFILE" 'module.prop'     "$MODPATH"
+extract "$ZIPFILE" 'action.sh'       "$MODPATH"
+extract "$ZIPFILE" 'autopif.sh'       "$MODPATH"
 extract "$ZIPFILE" 'post-fs-data.sh' "$MODPATH"
 extract "$ZIPFILE" 'service.sh'      "$MODPATH"
 
