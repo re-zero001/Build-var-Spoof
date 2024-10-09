@@ -36,7 +36,7 @@ android {
             path("src/main/cpp/CMakeLists.txt")
         }
     }
-    ndkVersion = "27.1.12297006"
+    ndkVersion = "28.0.12433566 rc1"
 }
 
 cmaker {

@@ -6,5 +6,7 @@ unset ASH_STANDALONE
 sh $MODPATH/autopif.sh || exit 1
 
 echo -e "\nDone!"
-echo -e "\nClosing dialog in 15 seconds ..."
-sleep 15
+if [ "$KSU" != "true" -a "$APATCH" != "true" ]; then
+    echo -e "\nClosing dialog in 15 seconds ..."
+    sleep 15
+fi
