@@ -269,18 +269,18 @@ static void companion_handler(int fd) {
     constexpr auto kSpoofConfigFile = "/data/adb/build_var_spoof/spoof_build_vars"sv;
     constexpr auto kDefaultSpoofConfig =
             R"EOF(
+MANUFACTURER=Google
+MODEL=Pixel 6 Pro
+FINGERPRINT=google/raven_beta/raven:15/BP11.241210.004/12926906:user/release-keys
+BRAND=google
+PRODUCT=raven_beta
+DEVICE=raven
+RELEASE=15
+ID=BP11.241210.004
+INCREMENTAL=12926906
 TYPE=user
 TAGS=release-keys
-ID=AP41.240823.009
-BRAND=google
-DEVICE=tokay
-FINGERPRINT=google/tokay_beta/tokay:15/AP41.240823.009/12329489:user/release-keys
-MANUFACTURER=Google
-MODEL=Pixel 9
-PRODUCT=tokay_beta
-INCREMENTAL=12329489
-RELEASE=15
-SECURITY_PATCH=2024-09-05
+SECURITY_PATCH=2025-01-05
 )EOF"sv;
     struct stat st{};
     int enabled = stat(kSpoofConfigFile.data(), &st) == 0;
