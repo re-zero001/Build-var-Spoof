@@ -142,12 +142,10 @@ androidComponents.onVariants { variant ->
         val pushTask = tasks.register<Exec>("push$variantCapped") {
             group = "module"
             dependsOn(zipTask)
-            commandLine(
-                "adb",
-                "push",
-                zipTask.flatMap { it.archiveFile },
-                "/data/local/tmp"
-            )
+            doFirst {
+                val zipFilePath = zipTask.get().archiveFile.get().asFile.absolutePath
+                commandLine("adb", "push", zipFilePath, "/data/local/tmp")
+            }
         }
 
         val installKsuTask = tasks.register<Exec>("installKsu$variantCapped") {
@@ -165,10 +163,7 @@ androidComponents.onVariants { variant ->
             commandLine(
                 "adb",
                 "shell",
-                "su",
-                "-M",
-                "-c",
-                "magisk --install-module /data/local/tmp/$zipFileName"
+                "su -c 'magisk --install-module /data/local/tmp/$zipFileName'"
             )
         }
 
