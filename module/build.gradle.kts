@@ -1,6 +1,8 @@
 import android.databinding.tool.ext.capitalizeUS
+import org.apache.commons.codec.binary.Hex
 import org.apache.tools.ant.filters.FixCrLfFilter
 import org.apache.tools.ant.filters.ReplaceTokens
+import org.gradle.kotlin.dsl.register
 import java.security.MessageDigest
 
 plugins {
@@ -36,7 +38,6 @@ android {
             path("src/main/cpp/CMakeLists.txt")
         }
     }
-    ndkVersion = "28.0.13004108"
 }
 
 cmaker {
@@ -65,7 +66,7 @@ androidComponents.onVariants { variant ->
         val variantLowered = variant.name.lowercase()
         val variantCapped = variant.name.capitalizeUS()
         val buildTypeLowered = variant.buildType?.lowercase()
-        val supportedAbis = abiList.map {
+        val supportedAbis = abiList.joinToString(" ") {
             when (it) {
                 "arm64-v8a" -> "arm64"
                 "armeabi-v7a" -> "arm"
@@ -73,13 +74,13 @@ androidComponents.onVariants { variant ->
                 "x86_64" -> "x64"
                 else -> error("unsupported abi $it")
             }
-        }.joinToString(" ")
+        }
 
         val moduleDir = layout.buildDirectory.file("outputs/module/$variantLowered")
         val zipFileName =
             "$moduleName-$verName-$verCode-$commitHash-$buildTypeLowered.zip".replace(' ', '-')
 
-        val prepareModuleFilesTask = task<Sync>("prepareModuleFiles$variantCapped") {
+        val prepareModuleFilesTask = tasks.register<Sync>("prepareModuleFiles$variantCapped") {
             group = "module"
             dependsOn("assemble$variantCapped")
             into(moduleDir)
@@ -122,7 +123,7 @@ androidComponents.onVariants { variant ->
                         md.update(bytes, 0, size)
                     }
                     file(file.path + ".sha256").writeText(
-                        org.apache.commons.codec.binary.Hex.encodeHexString(
+                        Hex.encodeHexString(
                             md.digest()
                         )
                     )
@@ -130,7 +131,7 @@ androidComponents.onVariants { variant ->
             }
         }
 
-        val zipTask = task<Zip>("zip$variantCapped") {
+        val zipTask = tasks.register<Zip>("zip$variantCapped") {
             group = "module"
             dependsOn(prepareModuleFilesTask)
             archiveFileName.set(zipFileName)
@@ -138,13 +139,18 @@ androidComponents.onVariants { variant ->
             from(moduleDir)
         }
 
-        val pushTask = task<Exec>("push$variantCapped") {
+        val pushTask = tasks.register<Exec>("push$variantCapped") {
             group = "module"
             dependsOn(zipTask)
-            commandLine("adb", "push", zipTask.outputs.files.singleFile.path, "/data/local/tmp")
+            commandLine(
+                "adb",
+                "push",
+                zipTask.flatMap { it.archiveFile },
+                "/data/local/tmp"
+            )
         }
 
-        val installKsuTask = task<Exec>("installKsu$variantCapped") {
+        val installKsuTask = tasks.register<Exec>("installKsu$variantCapped") {
             group = "module"
             dependsOn(pushTask)
             commandLine(
@@ -153,7 +159,7 @@ androidComponents.onVariants { variant ->
             )
         }
 
-        val installMagiskTask = task<Exec>("installMagisk$variantCapped") {
+        val installMagiskTask = tasks.register<Exec>("installMagisk$variantCapped") {
             group = "module"
             dependsOn(pushTask)
             commandLine(
@@ -166,13 +172,13 @@ androidComponents.onVariants { variant ->
             )
         }
 
-        task<Exec>("installKsuAndReboot$variantCapped") {
+        tasks.register<Exec>("installKsuAndReboot$variantCapped") {
             group = "module"
             dependsOn(installKsuTask)
             commandLine("adb", "reboot")
         }
 
-        task<Exec>("installMagiskAndReboot$variantCapped") {
+        tasks.register<Exec>("installMagiskAndReboot$variantCapped") {
             group = "module"
             dependsOn(installMagiskTask)
             commandLine("adb", "reboot")
