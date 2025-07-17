@@ -15,17 +15,9 @@ Here is an example of a spoof config:
 
 ```
 MANUFACTURER=Google
-MODEL=Pixel 9 Pro XL
-FINGERPRINT=google/komodo_beta/komodo:15/AP31.240617.015/12207491:user/release-keys
-BRAND=google
-PRODUCT=komodo_beta
-DEVICE=komodo
-RELEASE=15
-ID=AP31.240617.015
-INCREMENTAL=12207491
-TYPE=user
-TAGS=release-keys
-SECURITY_PATCH=2024-08-05
+MODEL=Pixel 6
+FINGERPRINT=google/oriole_beta/oriole:16/BP31.250523.010/13667654:user/release-keys
+SECURITY_PATCH=2025-06-05
 ```
 
 ## Acknowledgement

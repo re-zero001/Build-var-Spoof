@@ -1,17 +1,3 @@
-/* Copyright 2022-2023 John "topjohnwu" Wu
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
- * REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
- * AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
- * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
- * LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
- * OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
- * PERFORMANCE OF THIS SOFTWARE.
- */
-
 #include "array"
 #include "cstdlib"
 #include <unistd.h>
@@ -24,6 +10,8 @@
 #include <sys/stat.h>
 #include "tuple"
 #include <unistd.h>
+#include <cstring>
+#include <vector>
 
 #include "logging.hpp"
 #include "zygisk.hpp"
@@ -50,32 +38,48 @@ struct Prop {
     bool has_value{false};
     PropValue value {};
 
-    [[maybe_unused]] inline consteval static const char *getField() {
+    [[maybe_unused]] inline constexpr static const char *getField() {
         return Field.data;
     }
-    [[maybe_unused]] inline consteval static bool isVersion() {
+    [[maybe_unused]] inline constexpr static bool isVersion() {
         return Version;
     }
 };
 
 static_assert(sizeof(Prop<void, "", false>) % sizeof(void*) == 0);
 
+using PropManufacturer              = Prop<jstring, "MANUFACTURER">;
+using PropModel                     = Prop<jstring, "MODEL">;
+using PropFingerprint               = Prop<jstring, "FINGERPRINT">;
+using PropBrand                     = Prop<jstring, "BRAND">;
+using PropProduct                   = Prop<jstring, "PRODUCT">;
+using PropDevice                    = Prop<jstring, "DEVICE">;
+using PropRelease                   = Prop<jstring, "RELEASE", true>;
+using PropId                        = Prop<jstring, "ID">;
+using PropIncremental               = Prop<jstring, "INCREMENTAL", true>;
+using PropType                      = Prop<jstring, "TYPE">;
+using PropTags                      = Prop<jstring, "TAGS">;
+using PropSecurityPatch             = Prop<jstring, "SECURITY_PATCH", true>;
+using PropBoard                     = Prop<jstring, "BOARD">;
+using PropHardware                  = Prop<jstring, "HARDWARE">;
+using PropDeviceInitialSdkInt       = Prop<jint, "DEVICE_INITIAL_SDK_INT", true>;
+
 using SpoofConfig = std::tuple<
-        Prop<jstring, "MANUFACTURER">,
-        Prop<jstring, "MODEL">,
-        Prop<jstring, "FINGERPRINT">,
-        Prop<jstring, "BRAND">,
-        Prop<jstring, "PRODUCT">,
-        Prop<jstring, "DEVICE">,
-        Prop<jstring, "RELEASE", true>,
-        Prop<jstring, "ID">,
-        Prop<jstring, "INCREMENTAL", true>,
-        Prop<jstring, "TYPE">,
-        Prop<jstring, "TAGS">,
-        Prop<jstring, "SECURITY_PATCH", true>,
-        Prop<jstring, "BOARD">,
-        Prop<jstring, "HARDWARE">,
-        Prop<jint, "DEVICE_INITIAL_SDK_INT", true>
+        PropManufacturer,
+        PropModel,
+        PropFingerprint,
+        PropBrand,
+        PropProduct,
+        PropDevice,
+        PropRelease,
+        PropId,
+        PropIncremental,
+        PropType,
+        PropTags,
+        PropSecurityPatch,
+        PropBoard,
+        PropHardware,
+        PropDeviceInitialSdkInt
 >;
 
 ssize_t xread(int fd, void *buffer, size_t count) {
@@ -148,13 +152,13 @@ public:
         auto fd = api_->connectCompanion();
         if (fd >= 0) [[likely]] {
             // read enabled
-            xread(fd, &enabled, sizeof(enabled));
-            if (enabled) {
+            if (xread(fd, &enabled, sizeof(enabled)) != -1 && enabled) {
                 xread(fd, &spoofConfig, sizeof(spoofConfig));
             }
             close(fd);
         }
         if (enabled) {
+            parseFingerprint(spoofConfig);
             LOGI("spoofing build vars in GMS!");
             auto buildClass = env_->FindClass("android/os/Build");
             auto buildVersionClass = env_->FindClass("android/os/Build$VERSION");
@@ -186,6 +190,68 @@ public:
 private:
     Api *api_{nullptr};
     JNIEnv *env_{nullptr};
+
+    using FingerprintMappingRecipe = std::tuple<
+            PropBrand,          // parts[0]
+            PropProduct,        // parts[1]
+            PropDevice,         // parts[2]
+            PropRelease,        // parts[3]
+            PropId,             // parts[4]
+            PropIncremental,    // parts[5]
+            PropType,           // parts[6]
+            PropTags            // parts[7]
+    >;
+
+    template <typename PropType>
+    void set_prop_if_unset(PropType &prop, std::string_view value) {
+        if (!prop.has_value) {
+            size_t len_to_copy = std::min(value.length(), prop.value.size() - 1);
+            memcpy(prop.value.data(), value.data(), len_to_copy);
+            prop.value[len_to_copy] = '\0';
+            prop.has_value = true;
+            LOGD("parsing fingerprint: %s -> %s", prop.getField(), prop.value.data());
+        }
+    }
+
+    template<std::size_t... I>
+    void assign_parts_impl(SpoofConfig &config,
+                           const std::vector<std::string_view> &parts,
+                           std::index_sequence<I...>) {
+        ( (this->set_prop_if_unset(
+                std::get<typename std::tuple_element_t<I, FingerprintMappingRecipe>>(config),
+                parts[I]
+        )), ... );
+    }
+
+    void parseFingerprint(SpoofConfig &spoof_config) {
+        auto &fingerprint_prop = std::get<Prop<jstring, "FINGERPRINT">>(spoof_config);
+        if (!fingerprint_prop.has_value) {
+            return;
+        }
+
+        std::string_view fp(fingerprint_prop.value.data());
+
+        std::vector<std::string_view> parts;
+        size_t start = 0;
+        const char delimiters[] = {'/', '/', ':', '/', '/', ':', '/'};
+        for (char delim : delimiters) {
+            size_t end = fp.find(delim, start);
+            if (end == std::string_view::npos) {
+                return;
+            }
+            parts.push_back(fp.substr(start, end - start));
+            start = end + 1;
+        }
+        parts.push_back(fp.substr(start));
+
+        constexpr auto expected_parts = std::tuple_size_v<FingerprintMappingRecipe>;
+        if (parts.size() != expected_parts) {
+            return;
+        }
+
+        assign_parts_impl(spoof_config, parts,
+                          std::make_index_sequence<expected_parts>{});
+    }
 
     template<typename T>
     inline bool setField(jclass clazz, const char* field, const PropValue& value);
@@ -231,7 +297,6 @@ void read_config(FILE *config, SpoofConfig &spoof_config) {
     char *l = nullptr;
     struct finally {
         char *(&l);
-
         ~finally() { free(l); }
     } finally{l};
     size_t len = 0;
@@ -265,22 +330,15 @@ void read_config(FILE *config, SpoofConfig &spoof_config) {
         }, spoof_config);
     }
 }
+
 static void companion_handler(int fd) {
     constexpr auto kSpoofConfigFile = "/data/adb/build_var_spoof/spoof_build_vars"sv;
     constexpr auto kDefaultSpoofConfig =
             R"EOF(
 MANUFACTURER=Google
-MODEL=Pixel 6 Pro
-FINGERPRINT=google/raven_beta/raven:15/BP11.241210.004/12926906:user/release-keys
-BRAND=google
-PRODUCT=raven_beta
-DEVICE=raven
-RELEASE=15
-ID=BP11.241210.004
-INCREMENTAL=12926906
-TYPE=user
-TAGS=release-keys
-SECURITY_PATCH=2025-01-05
+MODEL=Pixel 6
+FINGERPRINT=google/oriole_beta/oriole:16/BP31.250523.010/13667654:user/release-keys
+SECURITY_PATCH=2025-06-05
 )EOF"sv;
     struct stat st{};
     int enabled = stat(kSpoofConfigFile.data(), &st) == 0;

@@ -93,29 +93,10 @@ if [ -f "$OUT/res/xml/inject_fields.xml" ]; then
   FINGERPRINT=$(grep 'name="FINGERPRINT"' $OUT/res/xml/inject_fields.xml | sed 's;.*value="\([^"]*\)".*;\1;g')
   SECURITY_PATCH=$(grep 'name="SECURITY_PATCH"' $OUT/res/xml/inject_fields.xml | sed 's;.*value="\([^"]*\)".*;\1;g')
 
-  if [ -n "$FINGERPRINT" ]; then
-    BRAND=$(echo $FINGERPRINT | cut -d'/' -f1)
-    PRODUCT=$(echo $FINGERPRINT | cut -d'/' -f2)
-    DEVICE=$(echo $FINGERPRINT | cut -d'/' -f3 | cut -d':' -f1)
-    RELEASE=$(echo $FINGERPRINT | cut -d':' -f2 | cut -d'/' -f1)
-    ID=$(echo $FINGERPRINT | cut -d'/' -f4)
-    INCREMENTAL=$(echo $FINGERPRINT | cut -d'/' -f5 | cut -d':' -f1)
-    TYPE=$(echo $FINGERPRINT | cut -d':' -f3 | cut -d'/' -f1)
-    TAGS=$(echo $FINGERPRINT | cut -d':' -f3 | cut -d'/' -f2)
-  fi
-
   {
     echo "MANUFACTURER=$MANUFACTURER"
-    echo "BRAND=$BRAND"
-    echo "DEVICE=$DEVICE"
-    echo "PRODUCT=$PRODUCT"
     echo "MODEL=$MODEL"
     echo "FINGERPRINT=$FINGERPRINT"
-    echo "RELEASE=$RELEASE"
-    echo "ID=$ID"
-    echo "INCREMENTAL=$INCREMENTAL"
-    echo "TYPE=$TYPE"
-    echo "TAGS=$TAGS"
     echo "SECURITY_PATCH=$SECURITY_PATCH"
   } | tee /data/adb/build_var_spoof/spoof_build_vars
 
