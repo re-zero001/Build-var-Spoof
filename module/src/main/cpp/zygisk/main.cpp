@@ -337,8 +337,8 @@ static void companion_handler(int fd) {
             R"EOF(
 MANUFACTURER=Google
 MODEL=Pixel 6
-FINGERPRINT=google/oriole_beta/oriole:16/BP31.250523.010/13667654:user/release-keys
-SECURITY_PATCH=2025-06-05
+FINGERPRINT=google/oriole_beta/oriole:Baklava/BP41.250725.006/13939570:user/release-keys
+SECURITY_PATCH=2025-08-05
 )EOF"sv;
     struct stat st{};
     int enabled = stat(kSpoofConfigFile.data(), &st) == 0;
