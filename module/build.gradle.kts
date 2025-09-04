@@ -153,7 +153,7 @@ androidComponents.onVariants { variant ->
             dependsOn(pushTask)
             commandLine(
                 "adb", "shell", "su", "-c",
-                "/data/adb/ksud module install /data/local/tmp/$zipFileName"
+                "'/data/adb/ksud module install /data/local/tmp/$zipFileName'"
             )
         }
 
@@ -161,9 +161,8 @@ androidComponents.onVariants { variant ->
             group = "module"
             dependsOn(pushTask)
             commandLine(
-                "adb",
-                "shell",
-                "su -c 'magisk --install-module /data/local/tmp/$zipFileName'"
+                "adb", "shell", "su", "-c",
+                "'magisk --install-module /data/local/tmp/$zipFileName'"
             )
         }
 
