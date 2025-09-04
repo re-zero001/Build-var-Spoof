@@ -61,6 +61,7 @@ cmaker {
 dependencies {
     implementation(libs.cxx)
 }
+
 androidComponents.onVariants { variant ->
     afterEvaluate {
         val variantLowered = variant.name.lowercase()
@@ -85,11 +86,11 @@ androidComponents.onVariants { variant ->
             dependsOn("assemble$variantCapped")
             into(moduleDir)
             from(rootProject.layout.projectDirectory.file("README.md"))
-            from(layout.projectDirectory.file("template")) {
+            from(layout.projectDirectory.file("module")) {
                 exclude("module.prop", "customize.sh", "post-fs-data.sh", "service.sh")
                 filter<FixCrLfFilter>("eol" to FixCrLfFilter.CrLf.newInstance("lf"))
             }
-            from(layout.projectDirectory.file("template")) {
+            from(layout.projectDirectory.file("module")) {
                 include("module.prop")
                 expand(
                     "moduleId" to moduleId,
@@ -100,7 +101,7 @@ androidComponents.onVariants { variant ->
                     "description" to moduleDescription,
                 )
             }
-            from(layout.projectDirectory.file("template")) {
+            from(layout.projectDirectory.file("module")) {
                 include("customize.sh", "post-fs-data.sh", "service.sh")
                 val tokens = mapOf(
                     "DEBUG" to if (buildTypeLowered == "debug") "true" else "false",
