@@ -1,4 +1,6 @@
+@file:Suppress("unused")
 import com.android.build.gradle.AppExtension
+import org.gradle.kotlin.dsl.support.serviceOf
 import java.io.ByteArrayOutputStream
 
 plugins {
@@ -7,7 +9,7 @@ plugins {
 
 fun String.execute(currentWorkingDir: File = file("./")): String {
     val byteOut = ByteArrayOutputStream()
-    project.exec {
+    serviceOf<ExecOperations>().exec {
         workingDir = currentWorkingDir
         commandLine = split("\\s".toRegex())
         standardOutput = byteOut
@@ -32,7 +34,7 @@ val androidMinSdkVersion by extra(27)
 val androidTargetSdkVersion by extra(36)
 val androidCompileSdkVersion by extra(36)
 val androidBuildToolsVersion by extra("36.0.0")
-val androidCompileNdkVersion by extra(libs.versions.ndk.get())
+val androidCompileNdkVersion: String by extra(libs.versions.ndk.get())
 val androidSourceCompatibility by extra(JavaVersion.VERSION_17)
 val androidTargetCompatibility by extra(JavaVersion.VERSION_17)
 
@@ -42,13 +44,14 @@ tasks.register("Delete", Delete::class) {
 
 fun Project.configureBaseExtension() {
     extensions.findByType(AppExtension::class)?.run {
-        namespace = "io.github.irena.build.var.spoof"
+        namespace = "org.irena.build.var.spoof"
         compileSdkVersion(androidCompileSdkVersion)
         ndkVersion = androidCompileNdkVersion
         buildToolsVersion = androidBuildToolsVersion
 
         defaultConfig {
             minSdk = androidMinSdkVersion
+            targetSdk = androidTargetSdkVersion
         }
 
         compileOptions {
