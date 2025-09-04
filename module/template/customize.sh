@@ -1,21 +1,59 @@
+# shellcheck disable=SC2034
 SKIPUNZIP=1
 
 DEBUG=@DEBUG@
 SONAME=build_var_spoof
 SUPPORTED_ABIS="arm64 x64 arm x86"
 MIN_SDK=27
+MIN_KSU_VERSION=10940
+MIN_KSUD_VERSION=11575
+MAX_KSU_VERSION=20000
+MIN_MAGISK_VERSION=26402
+MIN_APATCH_VERSION=10700
 
 if [ "$BOOTMODE" ] && [ "$KSU" ]; then
   ui_print "- Installing from KernelSU app"
   ui_print "- KernelSU version: $KSU_KERNEL_VER_CODE (kernel) + $KSU_VER_CODE (ksud)"
+  if ! [ "$KSU_KERNEL_VER_CODE" ] || [ "$KSU_KERNEL_VER_CODE" -lt "$MIN_KSU_VERSION" ]; then
+    ui_print "*********************************************************"
+    ui_print "! KernelSU version is too old!"
+    ui_print "! Please update KernelSU to latest version"
+    abort    "*********************************************************"
+  elif [ "$KSU_KERNEL_VER_CODE" -ge "$MAX_KSU_VERSION" ]; then
+    ui_print "*********************************************************"
+    ui_print "! KernelSU version abnormal!"
+    ui_print "! Please integrate KernelSU into your kernel"
+    ui_print "  as submodule instead of copying the source code"
+    abort    "*********************************************************"
+  fi
+  if ! [ "$KSU_VER_CODE" ] || [ "$KSU_VER_CODE" -lt "$MIN_KSUD_VERSION" ]; then
+    ui_print "*********************************************************"
+    ui_print "! ksud version is too old!"
+    ui_print "! Please update KernelSU Manager to latest version"
+    abort    "*********************************************************"
+  fi
   if [ "$(which magisk)" ]; then
     ui_print "*********************************************************"
     ui_print "! Multiple root implementation is NOT supported!"
-    ui_print "! Please uninstall Magisk before installing Zygisk Next"
+    ui_print "! Please uninstall Magisk before installing $SONAME"
+    abort    "*********************************************************"
+  fi
+elif [ "$BOOTMODE" ] && [ "$APATCH" ]; then
+  ui_print "- Installing from APatch app"
+  if ! [ "$APATCH_VER_CODE" ] || [ "$APATCH_VER_CODE" -lt "$MIN_APATCH_VERSION" ]; then
+    ui_print "*********************************************************"
+    ui_print "! Apatch version is too old!"
+    ui_print "! Please update Apatch to latest version"
     abort    "*********************************************************"
   fi
 elif [ "$BOOTMODE" ] && [ "$MAGISK_VER_CODE" ]; then
   ui_print "- Installing from Magisk app"
+  if [ "$MAGISK_VER_CODE" -lt "$MIN_MAGISK_VERSION" ]; then
+    ui_print "*********************************************************"
+    ui_print "! Magisk version is too old!"
+    ui_print "! Please update Magisk to latest version"
+    abort    "*********************************************************"
+  fi
 else
   ui_print "*********************************************************"
   ui_print "! Install from recovery is not supported"
@@ -58,7 +96,7 @@ ui_print "- Extracting module files"
 extract "$ZIPFILE" 'module.prop'     "$MODPATH"
 extract "$ZIPFILE" 'action.sh'       "$MODPATH"
 extract "$ZIPFILE" 'autopif.sh'      "$MODPATH"
-extract "$ZIPFILE" 'autopif2.sh'      "$MODPATH"
+extract "$ZIPFILE" 'autopif2.sh'     "$MODPATH"
 extract "$ZIPFILE" 'post-fs-data.sh' "$MODPATH"
 extract "$ZIPFILE" 'service.sh'      "$MODPATH"
 
