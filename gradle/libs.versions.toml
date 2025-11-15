@@ -1,5 +1,5 @@
 [versions]
-agp = "8.13.0"
+agp = "8.13.1"
 ndk = "29.0.13599879-beta2"
 
 [libraries]

@@ -348,7 +348,7 @@ SECURITY_PATCH=2025-08-05
         return;
     }
 
-    int cfd = -1;
+    int cfd;
     if (st.st_size == 0) {
         cfd = open(kSpoofConfigFile.data(), O_RDWR);
         if (cfd > 0) {
