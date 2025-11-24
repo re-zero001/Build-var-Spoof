@@ -7,7 +7,6 @@ SUPPORTED_ABIS="arm64 x64 arm x86"
 MIN_SDK=27
 MIN_KSU_VERSION=10940
 MIN_KSUD_VERSION=11575
-MAX_KSU_VERSION=20000
 MIN_MAGISK_VERSION=26402
 MIN_APATCH_VERSION=10700
 
@@ -18,12 +17,6 @@ if [ "$BOOTMODE" ] && [ "$KSU" ]; then
     ui_print "*********************************************************"
     ui_print "! KernelSU version is too old!"
     ui_print "! Please update KernelSU to latest version"
-    abort    "*********************************************************"
-  elif [ "$KSU_KERNEL_VER_CODE" -ge "$MAX_KSU_VERSION" ]; then
-    ui_print "*********************************************************"
-    ui_print "! KernelSU version abnormal!"
-    ui_print "! Please integrate KernelSU into your kernel"
-    ui_print "  as submodule instead of copying the source code"
     abort    "*********************************************************"
   fi
   if ! [ "$KSU_VER_CODE" ] || [ "$KSU_VER_CODE" -lt "$MIN_KSUD_VERSION" ]; then
